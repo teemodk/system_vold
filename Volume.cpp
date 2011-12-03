@@ -170,6 +170,11 @@ int Volume::handleBlockEvent(NetlinkEvent *evt) {
     return -1;
 }
 
+bool Volume::isPrimaryStorage() {
+    const char* externalStorage = getenv("EXTERNAL_STORAGE") ? : "/mnt/sdcard";
+    return !strcmp(getMountpoint(), externalStorage);
+}
+
 void Volume::setState(int state) {
     char msg[255];
     int oldState = mState;
@@ -302,8 +307,7 @@ int Volume::mountVol() {
     dev_t deviceNodes[4];
     int n, i, rc = 0;
     char errmsg[255];
-    const char* externalStorage = getenv("EXTERNAL_STORAGE");
-    bool primaryStorage = externalStorage && !strcmp(getMountpoint(), externalStorage);
+    bool primaryStorage = isPrimaryStorage();
     char decrypt_state[PROPERTY_VALUE_MAX];
     char crypto_state[PROPERTY_VALUE_MAX];
     char encrypt_progress[PROPERTY_VALUE_MAX];
@@ -602,6 +606,7 @@ int Volume::doUnmount(const char *path, bool force) {
 
 int Volume::unmountVol(bool force, bool revert) {
     int i, rc;
+    const char* externalStorage = getenv("EXTERNAL_STORAGE");
 
     if (getState() != Volume::State_Mounted) {
         SLOGE("Volume %s unmount request when not mounted", getLabel());
