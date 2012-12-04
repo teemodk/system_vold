@@ -1,36 +1,36 @@
 LOCAL_PATH:= $(call my-dir)
 
 common_src_files := \
-	VolumeManager.cpp \
-	CommandListener.cpp \
-	VoldCommand.cpp \
-	NetlinkManager.cpp \
-	NetlinkHandler.cpp \
-	Volume.cpp \
-	DirectVolume.cpp \
-	AutoVolume.cpp \
-	logwrapper.c \
-	Process.cpp \
-	Ext4.cpp \
-	Fat.cpp \
-	Ntfs.cpp \
-	Loop.cpp \
-	Devmapper.cpp \
-	ResponseCode.cpp \
-	Xwarp.cpp \
-	cryptfs.c
+    VolumeManager.cpp \
+    CommandListener.cpp \
+    VoldCommand.cpp \
+    NetlinkManager.cpp \
+    NetlinkHandler.cpp \
+    Volume.cpp \
+    DirectVolume.cpp \
+    AutoVolume.cpp \
+    logwrapper.c \
+    Process.cpp \
+    Ext4.cpp \
+    Fat.cpp \
+    Ntfs.cpp \
+    Loop.cpp \
+    Devmapper.cpp \
+    ResponseCode.cpp \
+    Xwarp.cpp \
+    cryptfs.c
 
 common_c_includes := \
-	$(KERNEL_HEADERS) \
-	system/extras/ext4_utils \
-	external/openssl/include
+    $(KERNEL_HEADERS) \
+    system/extras/ext4_utils \
+    external/openssl/include
 
 common_shared_libraries := \
-	libsysutils \
-	libcutils \
-	libdiskconfig \
-	libhardware_legacy \
-	libcrypto
+    libsysutils \
+    libcutils \
+    libdiskconfig \
+    libhardware_legacy \
+    libcrypto
 
 include $(CLEAR_VARS)
 
@@ -65,8 +65,8 @@ include $(CLEAR_VARS)
 LOCAL_MODULE:= vold
 
 LOCAL_SRC_FILES := \
-	main.cpp \
-	$(common_src_files)
+    main.cpp \
+    $(common_src_files)
 
 LOCAL_C_INCLUDES := $(common_c_includes)
 

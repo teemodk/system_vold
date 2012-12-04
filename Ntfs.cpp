@@ -42,7 +42,7 @@ extern "C" int logwrap(int argc, const char **argv, int background);
 extern "C" int mount(const char *, const char *, const char *, unsigned long, const void *);
 
 int Ntfs::check(const char *fsPath) {
-  
+
     // no NTFS file system check is performed, always return true
     SLOGI("Ntfs filesystem: Skipping fs checks\n");
     return 0;
@@ -64,7 +64,7 @@ int Ntfs::doMount(const char *fsPath, const char *mountPoint,
 
     // Testing/security, mount ro up to now
     flags |= MS_RDONLY;
-    
+
     /*
      * Note: This is a temporary hack. If the sampling profiler is enabled,
      * we make the SD card world-writable so any process can write snapshots.
@@ -95,7 +95,7 @@ int Ntfs::doMount(const char *fsPath, const char *mountPoint,
 }
 
 int Ntfs::format(const char *fsPath, unsigned int numSectors) {
-    
+
     SLOGE("Format ntfs filesystem not supported\n");
     errno = EIO;
     return -1;
