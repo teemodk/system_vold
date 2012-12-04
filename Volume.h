@@ -55,7 +55,6 @@ protected:
     int mPartIdx;
     int mOrigPartIdx;
     bool mRetryMount;
-    int mLunNumber;
 
     /*
      * The major/minor tuple of the currently mounted filesystem.
@@ -73,9 +72,6 @@ public:
     const char *getLabel() { return mLabel; }
     const char *getMountpoint() { return mMountpoint; }
     int getState() { return mState; }
-    bool isPrimaryStorage();
-    int getLunNumber() { return mLunNumber; }
-    void setLunNumber(int lunNumber);
 
     virtual int handleBlockEvent(NetlinkEvent *evt);
     virtual dev_t getDiskDevice();
