@@ -11,6 +11,7 @@ common_src_files := \
 	Process.cpp \
 	Ext4.cpp \
 	Fat.cpp \
+	Ntfs.cpp \
 	Loop.cpp \
 	Devmapper.cpp \
 	ResponseCode.cpp \
@@ -21,7 +22,8 @@ common_src_files := \
 common_c_includes := \
 	$(KERNEL_HEADERS) \
 	system/extras/ext4_utils \
-	external/openssl/include
+	external/openssl/include \
+	external/e2fsprogs/lib
 
 common_shared_libraries := \
 	libsysutils \
@@ -29,10 +31,32 @@ common_shared_libraries := \
 	liblog \
 	libdiskconfig \
 	libhardware_legacy \
+	libcrypto \
+	libext2_blkid \
 	liblogwrap \
 	libcrypto
 
 include $(CLEAR_VARS)
+
+ifneq ($(BOARD_VOLD_MAX_PARTITIONS),)
+LOCAL_CFLAGS += -DVOLD_MAX_PARTITIONS=$(BOARD_VOLD_MAX_PARTITIONS)
+endif
+
+ifeq ($(BOARD_VOLD_EMMC_SHARES_DEV_MAJOR), true)
+LOCAL_CFLAGS += -DVOLD_EMMC_SHARES_DEV_MAJOR
+endif
+
+ifeq ($(BOARD_VOLD_DISC_HAS_MULTIPLE_MAJORS), true)
+LOCAL_CFLAGS += -DVOLD_DISC_HAS_MULTIPLE_MAJORS
+endif
+
+ifneq ($(TARGET_FUSE_SDCARD_UID),)
+LOCAL_CFLAGS += -DFUSE_SDCARD_UID=$(TARGET_FUSE_SDCARD_UID)
+endif
+
+ifneq ($(TARGET_FUSE_SDCARD_GID),)
+LOCAL_CFLAGS += -DFUSE_SDCARD_GID=$(TARGET_FUSE_SDCARD_GID)
+endif
 
 LOCAL_MODULE := libvold
 
@@ -42,7 +66,8 @@ LOCAL_C_INCLUDES := $(common_c_includes)
 
 LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
 
-LOCAL_STATIC_LIBRARIES := libfs_mgr
+LOCAL_STATIC_LIBRARIES := \
+	libfs_mgr
 
 LOCAL_MODULE_TAGS := eng tests
 
@@ -60,9 +85,38 @@ LOCAL_C_INCLUDES := $(common_c_includes)
 
 LOCAL_CFLAGS := -Werror=format
 
+ifneq ($(BOARD_VOLD_MAX_PARTITIONS),)
+LOCAL_CFLAGS += -DVOLD_MAX_PARTITIONS=$(BOARD_VOLD_MAX_PARTITIONS)
+endif
+
+ifeq ($(BOARD_VOLD_EMMC_SHARES_DEV_MAJOR), true)
+LOCAL_CFLAGS += -DVOLD_EMMC_SHARES_DEV_MAJOR
+endif
+
+ifeq ($(BOARD_VOLD_DISC_HAS_MULTIPLE_MAJORS), true)
+LOCAL_CFLAGS += -DVOLD_DISC_HAS_MULTIPLE_MAJORS
+endif
+
+ifneq ($(TARGET_USE_CUSTOM_LUN_FILE_PATH),)
+LOCAL_CFLAGS += -DCUSTOM_LUN_FILE=\"$(TARGET_USE_CUSTOM_LUN_FILE_PATH)\"
+endif
+
+ifneq ($(TARGET_USE_CUSTOM_SECOND_LUN_NUM),)
+LOCAL_CFLAGS += -DCUSTOM_SECOND_LUN_NUM=$(TARGET_USE_CUSTOM_SECOND_LUN_NUM)
+endif
+
+ifneq ($(TARGET_FUSE_SDCARD_UID),)
+LOCAL_CFLAGS += -DFUSE_SDCARD_UID=$(TARGET_FUSE_SDCARD_UID)
+endif
+
+ifneq ($(TARGET_FUSE_SDCARD_GID),)
+LOCAL_CFLAGS += -DFUSE_SDCARD_GID=$(TARGET_FUSE_SDCARD_GID)
+endif
+
 LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
 
-LOCAL_STATIC_LIBRARIES := libfs_mgr
+LOCAL_STATIC_LIBRARIES := \
+	libfs_mgr
 
 include $(BUILD_EXECUTABLE)
 
