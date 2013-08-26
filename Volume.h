@@ -78,6 +78,7 @@ public:
     const char* getLabel() { return mLabel; }
     const char* getUuid() { return mUuid; }
     const char* getUserLabel() { return mUserLabel; }
+    bool isExternalAppsEnabled();
     int getState() { return mState; }
     int getFlags() { return mFlags; };
 
