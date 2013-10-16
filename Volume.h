@@ -47,12 +47,14 @@ public:
     static const char *SEC_ASECDIR_EXT;
     static const char *SEC_ASECDIR_INT;
     static const char *ASECDIR;
-
     static const char *LOOPDIR;
+    static const char *BLKID_PATH;
 
 #ifdef __cplusplus
 protected:
-    char *mLabel;
+    char* mLabel;
+    char* mUuid;
+    char* mUserLabel;
     VolumeManager *mVm;
     bool mDebug;
     int mPartIdx;
@@ -72,7 +74,9 @@ public:
     int unmountVol(bool force, bool revert);
     int formatVol(bool wipe);
 
-    const char *getLabel() { return mLabel; }
+    const char* getLabel() { return mLabel; }
+    const char* getUuid() { return mUuid; }
+    const char* getUserLabel() { return mUserLabel; }
     int getState() { return mState; }
     int getFlags() { return mFlags; };
 
@@ -92,6 +96,8 @@ public:
     virtual int getDeviceNodes(dev_t *devs, int max) = 0;
 
 protected:
+    void setUuid(const char* uuid);
+    void setUserLabel(const char* userLabel);
     void setState(int state);
 
     virtual int updateDeviceInfo(char *new_path, int new_major, int new_minor) = 0;
@@ -105,9 +111,8 @@ private:
     bool isMountpointMounted(const char *path);
     int mountAsecExternal();
     int doUnmount(const char *path, bool force);
-    int doMoveMount(const char *src, const char *dst, bool force);
     int doFuseMount(const char *src, const char *dst);
-    void protectFromAutorunStupidity();
+    int extractMetadata(const char* devicePath);
 };
 
 typedef android::List<Volume *> VolumeCollection;

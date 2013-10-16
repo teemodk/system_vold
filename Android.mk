@@ -42,6 +42,8 @@ common_c_includes := \
 	$(KERNEL_HEADERS) \
 	system/extras/ext4_utils \
 	external/openssl/include \
+	external/stlport/stlport \
+	bionic \
 	external/scrypt/lib/crypto \
 	external/e2fsprogs/lib \
 	system/core/fs_mgr/include \
@@ -49,6 +51,7 @@ common_c_includes := \
 
 common_libraries := \
 	libsysutils \
+	libstlport \
 	libcutils \
 	liblog \
 	libdiskconfig \
