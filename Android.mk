@@ -43,6 +43,10 @@ common_static_libraries := \
 
 include $(CLEAR_VARS)
 
+ifneq ($(BOARD_VOLD_MAX_PARTITIONS),)
+LOCAL_CFLAGS += -DVOLD_MAX_PARTITIONS=$(BOARD_VOLD_MAX_PARTITIONS)
+endif
+
 LOCAL_MODULE := libvold
 
 LOCAL_SRC_FILES := $(common_src_files)
@@ -68,6 +72,11 @@ LOCAL_SRC_FILES := \
 LOCAL_C_INCLUDES := $(common_c_includes)
 
 LOCAL_CFLAGS := -Werror=format
+
+ifneq ($(BOARD_VOLD_MAX_PARTITIONS),)
+LOCAL_CFLAGS += -DVOLD_MAX_PARTITIONS=$(BOARD_VOLD_MAX_PARTITIONS)
+endif
+
 
 LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
 
