@@ -55,7 +55,6 @@ common_c_includes := \
 
 common_libraries := \
 	libsysutils \
-	libstlport \
 	libcutils \
 	liblog \
 	libdiskconfig \
@@ -65,6 +64,7 @@ common_libraries := \
 common_static_libraries := \
 	libfs_mgr \
 	libext4_utils_static \
+	libstlport_static \
 	libscrypt_static \
 	libminshacrypt \
 	libpower
