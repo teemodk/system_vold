@@ -12,6 +12,10 @@ ifeq ($(BOARD_VOLD_DISC_HAS_MULTIPLE_MAJORS), true)
 common_cflags += -DVOLD_DISC_HAS_MULTIPLE_MAJORS
 endif
 
+ifneq ($(TARGET_USE_CUSTOM_LUN_FILE_PATH),)
+common_cflags += -DCUSTOM_LUN_FILE=\"$(TARGET_USE_CUSTOM_LUN_FILE_PATH)\"
+endif
+
 common_cflags += -Werror
 
 common_src_files := \
@@ -42,6 +46,8 @@ common_c_includes := \
 	$(KERNEL_HEADERS) \
 	system/extras/ext4_utils \
 	external/openssl/include \
+	external/stlport/stlport \
+	bionic \
 	external/scrypt/lib/crypto \
 	external/e2fsprogs/lib \
 	system/core/fs_mgr/include \
@@ -58,6 +64,7 @@ common_libraries := \
 common_static_libraries := \
 	libfs_mgr \
 	libext4_utils_static \
+	libstlport_static \
 	libscrypt_static \
 	libminshacrypt \
 	libpower

@@ -51,8 +51,6 @@
 #include "Asec.h"
 #include "cryptfs.h"
 
-#define MASS_STORAGE_FILE_PATH  "/sys/class/android_usb/android0/f_mass_storage/lun/file"
-
 VolumeManager *VolumeManager::sInstance = NULL;
 
 VolumeManager *VolumeManager::Instance() {
@@ -130,6 +128,7 @@ int VolumeManager::stop() {
 }
 
 int VolumeManager::addVolume(Volume *v) {
+    v->setLunNumber(mVolumes->size());
     mVolumes->push_back(v);
     return 0;
 }
@@ -446,7 +445,7 @@ int VolumeManager::createAsec(const char *id, unsigned int numSectors, const cha
 
         int mountStatus;
         if (usingExt4) {
-            mountStatus = Ext4::doMount(dmDevice, mountPoint, false, false, false);
+            mountStatus = Ext4::doMount(dmDevice, mountPoint, false, false, false, false);
         } else {
             mountStatus = Fat::doMount(dmDevice, mountPoint, false, false, false, ownerUid, 0, 0000,
                     false);
@@ -516,7 +515,7 @@ int VolumeManager::finalizeAsec(const char *id) {
 
     int result = 0;
     if (sb.c_opts & ASEC_SB_C_OPTS_EXT4) {
-        result = Ext4::doMount(loopDevice, mountPoint, true, true, true);
+        result = Ext4::doMount(loopDevice, mountPoint, true, true, true, false);
     } else {
         result = Fat::doMount(loopDevice, mountPoint, true, true, true, 0, 0, 0227, false);
     }
@@ -579,7 +578,8 @@ int VolumeManager::fixupAsecPermissions(const char *id, gid_t gid, const char* f
     int ret = Ext4::doMount(loopDevice, mountPoint,
             false /* read-only */,
             true  /* remount */,
-            false /* executable */);
+            false /* executable */,
+            false /* sdcard */);
     if (ret) {
         SLOGE("Unable remount to fix permissions for %s (%s)", id, strerror(errno));
         return -1;
@@ -635,7 +635,8 @@ int VolumeManager::fixupAsecPermissions(const char *id, gid_t gid, const char* f
     result |= Ext4::doMount(loopDevice, mountPoint,
             true /* read-only */,
             true /* remount */,
-            true /* execute */);
+            true /* execute */,
+            false /* sdcard */);
 
     if (result) {
         SLOGE("ASEC fix permissions failed (%s)", strerror(errno));
@@ -1033,7 +1034,7 @@ int VolumeManager::mountAsec(const char *id, const char *key, int ownerUid) {
 
     int result;
     if (sb.c_opts & ASEC_SB_C_OPTS_EXT4) {
-        result = Ext4::doMount(dmDevice, mountPoint, true, false, true);
+        result = Ext4::doMount(dmDevice, mountPoint, true, false, true, false);
     } else {
         result = Fat::doMount(dmDevice, mountPoint, true, false, true, ownerUid, 0, 0222, false);
     }
@@ -1252,6 +1253,36 @@ int VolumeManager::shareEnabled(const char *label, const char *method, bool *ena
     return 0;
 }
 
+static const char *LUN_FILES[] = {
+#ifdef CUSTOM_LUN_FILE
+    CUSTOM_LUN_FILE,
+#endif
+    /* Only andriod0 exists, but the %d in there is a hack to satisfy the
+       format string and also give a not found error when %d > 0 */
+    "/sys/class/android_usb/android%d/f_mass_storage/lun/file",
+    NULL
+};
+
+int VolumeManager::openLun(int number) {
+    const char **iterator = LUN_FILES;
+    char qualified_lun[255];
+    while (*iterator) {
+        bzero(qualified_lun, 255);
+        snprintf(qualified_lun, 254, *iterator, number);
+        int fd = open(qualified_lun, O_WRONLY);
+        if (fd >= 0) {
+            SLOGD("Opened lunfile %s", qualified_lun);
+            return fd;
+        }
+        SLOGE("Unable to open ums lunfile %s (%s)", qualified_lun, strerror(errno));
+        iterator++;
+    }
+
+    errno = EINVAL;
+    SLOGE("Unable to find ums lunfile for LUN %d", number);
+    return -1;
+}
+
 int VolumeManager::shareVolume(const char *label, const char *method) {
     Volume *v = lookupVolume(label);
 
@@ -1315,8 +1346,7 @@ int VolumeManager::shareVolume(const char *label, const char *method) {
         return -1;
     }
 
-    if ((fd = open(MASS_STORAGE_FILE_PATH, O_WRONLY)) < 0) {
-        SLOGE("Unable to open ums lunfile (%s)", strerror(errno));
+    if ((fd = openLun(v->getLunNumber())) < 0) {
         return -1;
     }
 
@@ -1365,8 +1395,7 @@ int VolumeManager::unshareVolume(const char *label, const char *method) {
     }
 
     int fd;
-    if ((fd = open(MASS_STORAGE_FILE_PATH, O_WRONLY)) < 0) {
-        SLOGE("Unable to open ums lunfile (%s)", strerror(errno));
+    if ((fd = openLun(v->getLunNumber())) < 0) {
         return -1;
     }
 
@@ -1564,28 +1593,54 @@ bool VolumeManager::isMountpointMounted(const char *mp)
 }
 
 int VolumeManager::cleanupAsec(Volume *v, bool force) {
-    int rc = unmountAllAsecsInDir(Volume::SEC_ASECDIR_EXT);
+    // Only primary storage needs ASEC cleanup
+    if (!(v->getFlags() & VOL_PROVIDES_ASEC)) {
+        return 0;
+    }
 
-    AsecIdCollection toUnmount;
-    // Find the remaining OBB files that are on external storage.
+    int rc = 0;
+
+    char asecFileName[255];
+
+    AsecIdCollection removeAsec;
+    AsecIdCollection removeObb;
+
     for (AsecIdCollection::iterator it = mActiveContainers->begin(); it != mActiveContainers->end();
             ++it) {
         ContainerData* cd = *it;
 
         if (cd->type == ASEC) {
-            // nothing
+            if (findAsec(cd->id, asecFileName, sizeof(asecFileName))) {
+                SLOGE("Couldn't find ASEC %s; cleaning up", cd->id);
+                removeAsec.push_back(cd);
+            } else {
+                SLOGD("Found ASEC at path %s", asecFileName);
+                if (!strncmp(asecFileName, Volume::SEC_ASECDIR_EXT,
+                        strlen(Volume::SEC_ASECDIR_EXT))) {
+                    removeAsec.push_back(cd);
+                }
+            }
         } else if (cd->type == OBB) {
             if (v == getVolumeForFile(cd->id)) {
-                toUnmount.push_back(cd);
+                removeObb.push_back(cd);
             }
         } else {
             SLOGE("Unknown container type %d!", cd->type);
         }
     }
 
-    for (AsecIdCollection::iterator it = toUnmount.begin(); it != toUnmount.end(); ++it) {
+    for (AsecIdCollection::iterator it = removeAsec.begin(); it != removeAsec.end(); ++it) {
         ContainerData *cd = *it;
-        SLOGI("Unmounting ASEC %s (dependant on %s)", cd->id, v->getFuseMountpoint());
+        SLOGI("Unmounting ASEC %s (dependent on %s)", cd->id, v->getLabel());
+        if (unmountAsec(cd->id, force)) {
+            SLOGE("Failed to unmount ASEC %s (%s)", cd->id, strerror(errno));
+            rc = -1;
+        }
+    }
+
+    for (AsecIdCollection::iterator it = removeObb.begin(); it != removeObb.end(); ++it) {
+        ContainerData *cd = *it;
+        SLOGI("Unmounting OBB %s (dependent on %s)", cd->id, v->getLabel());
         if (unmountObb(cd->id, force)) {
             SLOGE("Failed to unmount OBB %s (%s)", cd->id, strerror(errno));
             rc = -1;
