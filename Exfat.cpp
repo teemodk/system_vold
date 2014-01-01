@@ -42,29 +42,36 @@
 
 #include "Exfat.h"
 
-static char EXFAT_FSCK[] = HELPER_PATH "fsck.exfat";
-static char EXFAT_MKFS[] = HELPER_PATH "mkfs.exfat";
-static char EXFAT_MOUNT[] = HELPER_PATH "mount.exfat";
+static char EXFAT_FSCK[] = "/system/bin/fsck.exfat";
+static char EXFAT_MKFS[] = "/system/bin/mkfs.exfat";
+static char EXFAT_MOUNT[] = "/system/bin/mount.exfat";
 
 int Exfat::doMount(const char *fsPath, const char *mountPoint,
                  bool ro, bool remount, bool executable,
-                 int ownerUid, int ownerGid, int permMask) {
+                 int ownerUid, int ownerGid, int permMask,bool sdcard) {
 
     int rc = -1;
     char mountData[255];
     const char *args[6];
     int status;
-
     if (access(EXFAT_MOUNT, X_OK)) {
         SLOGE("Unable to mount, exFAT FUSE helper not found!");
         return rc;
     }
-
-    sprintf(mountData,
+    if (sdcard) {
+        // Mount external volumes with forced sdcard_external context
+        sprintf(mountData,
+            "context=u:object_r:sdcard_external:s0,noatime,nodev,nosuid,dirsync,uid=%d,gid=%d,fmask=%o,dmask=%o,%s,%s",
+            ownerUid, ownerGid, permMask, permMask,
+            (executable ? "exec" : "noexec"),
+            (ro ? "ro" : "rw"));
+    } else {
+        sprintf(mountData,
             "noatime,nodev,nosuid,dirsync,uid=%d,gid=%d,fmask=%o,dmask=%o,%s,%s",
             ownerUid, ownerGid, permMask, permMask,
             (executable ? "exec" : "noexec"),
             (ro ? "ro" : "rw"));
+    }
 
     args[0] = EXFAT_MOUNT;
     args[1] = "-o";
@@ -164,3 +171,4 @@ int Exfat::format(const char *fsPath) {
     }
     return 0;
 }
+
